@@ -32,33 +32,36 @@ async def check_logistics_timeouts() -> None:
     """
     cutoff = datetime.now(tz=timezone.utc) - timedelta(hours=_LOGISTICS_TIMEOUT_HOURS)
 
-    async with AsyncSessionLocal() as db:
-        stmt = (
-            select(Order)
-            .where(
-                Order.status == OrderStatus.LOGISTICS_SEARCH,
-                Order.logistics_search_started_at <= cutoff,
-            )
-            .options(selectinload(Order.escrow), selectinload(Order.farmer))
-            .with_for_update(skip_locked=True)
-        )
-        expired_orders = (await db.execute(stmt)).scalars().all()
-
-        for order in expired_orders:
-            try:
-                await order_fsm.rollback_to_listed(db, order, reason="48hr_timeout")
-
-                # Cancel escrow and refund buyer
-                if order.escrow is not None:
-                    await escrow_service.cancel_escrow(order, order.escrow)
-
-                await db.commit()
-                logger.info("Rolled back order %s (48hr logistics timeout)", order.id)
-            except Exception as exc:
-                await db.rollback()
-                logger.error(
-                    "Failed to roll back order %s: %s", order.id, exc, exc_info=True
+    try:
+        async with AsyncSessionLocal() as db:
+            stmt = (
+                select(Order)
+                .where(
+                    Order.status == OrderStatus.LOGISTICS_SEARCH,
+                    Order.logistics_search_started_at <= cutoff,
                 )
+                .options(selectinload(Order.escrow), selectinload(Order.farmer))
+                .with_for_update(skip_locked=True)
+            )
+            expired_orders = (await db.execute(stmt)).scalars().all()
+
+            for order in expired_orders:
+                try:
+                    await order_fsm.rollback_to_listed(db, order, reason="48hr_timeout")
+
+                    # Cancel escrow and refund buyer
+                    if order.escrow is not None:
+                        await escrow_service.cancel_escrow(order, order.escrow)
+
+                    await db.commit()
+                    logger.info("Rolled back order %s (48hr logistics timeout)", order.id)
+                except Exception as exc:
+                    await db.rollback()
+                    logger.error(
+                        "Failed to roll back order %s: %s", order.id, exc, exc_info=True
+                    )
+    except Exception as exc:
+        logger.error("check_logistics_timeouts job failed (DB unavailable?): %s", exc, exc_info=True)
 
 
 @scheduler.scheduled_job("interval", minutes=15, id="gps_heartbeat_monitor")
@@ -69,33 +72,36 @@ async def check_gps_heartbeats() -> None:
     """
     cutoff = datetime.now(tz=timezone.utc) - timedelta(hours=_GPS_SILENCE_HOURS)
 
-    async with AsyncSessionLocal() as db:
-        stmt = (
-            select(LogisticsAssignment)
-            .join(Order, Order.id == LogisticsAssignment.order_id)
-            .where(
-                Order.status == OrderStatus.IN_TRANSIT,
-                LogisticsAssignment.last_gps_ping_at <= cutoff,
-                LogisticsAssignment.gps_alert_sent == False,  # noqa: E712
+    try:
+        async with AsyncSessionLocal() as db:
+            stmt = (
+                select(LogisticsAssignment)
+                .join(Order, Order.id == LogisticsAssignment.order_id)
+                .where(
+                    Order.status == OrderStatus.IN_TRANSIT,
+                    LogisticsAssignment.last_gps_ping_at <= cutoff,
+                    LogisticsAssignment.gps_alert_sent == False,  # noqa: E712
+                )
             )
-        )
-        stale_assignments = (await db.execute(stmt)).scalars().all()
+            stale_assignments = (await db.execute(stmt)).scalars().all()
 
-        for assignment in stale_assignments:
-            try:
-                await notification_service.notify_gps_heartbeat_lost(
-                    str(assignment.order_id), str(assignment.middleman_id)
-                )
-                assignment.gps_alert_sent = True
-                await db.commit()
-                logger.warning(
-                    "GPS silence alert sent for order %s (middleman %s)",
-                    assignment.order_id,
-                    assignment.middleman_id,
-                )
-            except Exception as exc:
-                await db.rollback()
-                logger.error("GPS heartbeat alert failed: %s", exc, exc_info=True)
+            for assignment in stale_assignments:
+                try:
+                    await notification_service.notify_gps_heartbeat_lost(
+                        str(assignment.order_id), str(assignment.middleman_id)
+                    )
+                    assignment.gps_alert_sent = True
+                    await db.commit()
+                    logger.warning(
+                        "GPS silence alert sent for order %s (middleman %s)",
+                        assignment.order_id,
+                        assignment.middleman_id,
+                    )
+                except Exception as exc:
+                    await db.rollback()
+                    logger.error("GPS heartbeat alert failed: %s", exc, exc_info=True)
+    except Exception as exc:
+        logger.error("check_gps_heartbeats job failed (DB unavailable?): %s", exc, exc_info=True)
 
 
 def start_scheduler() -> None:

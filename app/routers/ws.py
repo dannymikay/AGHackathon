@@ -8,11 +8,12 @@ from datetime import datetime, timezone
 
 from fastapi import APIRouter, Query, WebSocket, WebSocketDisconnect
 from sqlalchemy import select, text
+from sqlalchemy.orm import selectinload
 
 from app.database import AsyncSessionLocal
 from app.dependencies import decode_ws_token
 from app.models.logistics_assignment import LogisticsAssignment
-from app.models.order import OrderStatus
+from app.models.order import Order, OrderStatus
 from app.ws.manager import manager
 
 router = APIRouter(tags=["websockets"])
@@ -48,6 +49,31 @@ async def order_websocket(
                 "user_id": str(user_id),
             }
         )
+
+        # Push current DB state so the client can recover visual state after
+        # a page refresh or server restart without a separate REST call.
+        async with AsyncSessionLocal() as sync_db:
+            stmt = (
+                select(Order)
+                .where(Order.id == order_id)
+                .options(
+                    selectinload(Order.escrow),
+                    selectinload(Order.logistics_assignment),
+                )
+            )
+            order = (await sync_db.execute(stmt)).scalar_one_or_none()
+            if order is not None:
+                last_ping = None
+                if order.logistics_assignment:
+                    last_ping = order.logistics_assignment.last_gps_ping_at
+                await websocket.send_json({
+                    "type": "STATE_SYNC",
+                    "order_id": str(order_id),
+                    "order_status": order.status.value,
+                    "escrow_status": order.escrow.status.value if order.escrow else None,
+                    "last_gps_ping_at": last_ping.isoformat() if last_ping else None,
+                })
+
         while True:
             raw = await websocket.receive_text()
             if raw == '{"type":"PING"}':
