@@ -1,12 +1,20 @@
+import enum
 import uuid
 from datetime import datetime
 
 from geoalchemy2 import Geometry
-from sqlalchemy import Boolean, DateTime, Float, Integer, String, func
+from sqlalchemy import Boolean, DateTime, Enum as SQLEnum, Float, Integer, String, func
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.database import Base
+
+
+class TruckType(str, enum.Enum):
+    REEFER = "REEFER"          # Refrigerated — required for perishables / cold chain
+    VENTILATED = "VENTILATED"  # Airflow only — good for root crops (onions, potatoes)
+    INSULATED = "INSULATED"    # Passive insulation — medium-life produce
+    DRY_VAN = "DRY_VAN"        # Standard — non-perishables or very short hauls
 
 
 class Middleman(Base):
@@ -22,6 +30,11 @@ class Middleman(Base):
 
     truck_capacity_kg: Mapped[float] = mapped_column(Float, nullable=False)
     truck_plate: Mapped[str] = mapped_column(String(20), unique=True, nullable=False)
+    truck_type: Mapped[TruckType] = mapped_column(
+        SQLEnum(TruckType, name="truck_type_enum"),
+        nullable=False,
+        default=TruckType.DRY_VAN,
+    )
     route_radius_km: Mapped[float] = mapped_column(Float, default=100.0)
 
     on_time_rating: Mapped[float] = mapped_column(Float, default=0.0)

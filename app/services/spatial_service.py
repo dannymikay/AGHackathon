@@ -21,7 +21,7 @@ _GEOJSON_DIR = Path(__file__).parent.parent / "seed" / "geojson"
 DEMO_MIDDLEMEN: list[NearbyMiddlemanResponse] = []
 
 
-def _load_demo_middlemen() -> list[NearbyMiddlemanResponse]:
+def _load_demo_middlemen(requires_cold_chain: bool = False) -> list[NearbyMiddlemanResponse]:
     """Load mock middlemen from GeoJSON seed file for demo fallback."""
     path = _GEOJSON_DIR / "demo_trucks.geojson"
     if not path.exists():
@@ -30,6 +30,9 @@ def _load_demo_middlemen() -> list[NearbyMiddlemanResponse]:
     results = []
     for i, feature in enumerate(data.get("features", [])):
         props = feature.get("properties", {})
+        truck_type = props.get("truck_type", "DRY_VAN")
+        if requires_cold_chain and truck_type != "REEFER":
+            continue
         results.append(
             NearbyMiddlemanResponse(
                 middleman=MiddlemanPublic(
@@ -37,6 +40,7 @@ def _load_demo_middlemen() -> list[NearbyMiddlemanResponse]:
                     name=props.get("name", f"Demo Trucker {i+1}"),
                     truck_capacity_kg=props.get("truck_capacity_kg", 5000.0),
                     truck_plate=props.get("truck_plate", f"DEMO{i:04d}"),
+                    truck_type=truck_type,
                     route_radius_km=props.get("route_radius_km", 150.0),
                     on_time_rating=props.get("on_time_rating", 4.5),
                     total_deliveries=props.get("total_deliveries", 42),
@@ -54,20 +58,24 @@ async def find_middlemen_near_route(
     db: AsyncSession,
     farmer_location: GeoPoint,
     buyer_location: GeoPoint,
-    buffer_km: float = 5.0,
+    buffer_km: float = 25.0,
+    requires_cold_chain: bool = False,
 ) -> list[NearbyMiddlemanResponse]:
     """
     Find available middlemen whose current_location is within buffer_km of the
     straight-line route from farmer to buyer.
 
     Uses PostGIS ST_MakeLine + ST_Buffer(::geography) + ST_DWithin.
+    When requires_cold_chain is True, only REEFER trucks are returned.
     Falls back to mock data if PostGIS is unavailable or DEMO_MODE is active.
     """
     if not settings.POSTGIS_ENABLED:
-        return _load_demo_middlemen()
+        return _load_demo_middlemen(requires_cold_chain=requires_cold_chain)
+
+    cold_chain_filter = "AND m.truck_type = 'REEFER'" if requires_cold_chain else ""
 
     try:
-        raw_sql = text("""
+        raw_sql = text(f"""
             SELECT
                 m.*,
                 ST_Distance(
@@ -81,6 +89,7 @@ async def find_middlemen_near_route(
             WHERE
                 m.is_available = TRUE
                 AND m.current_location IS NOT NULL
+                {cold_chain_filter}
                 AND ST_DWithin(
                     m.current_location::geography,
                     ST_Buffer(
@@ -115,7 +124,7 @@ async def find_middlemen_near_route(
             for row in rows
         ]
     except Exception:
-        return _load_demo_middlemen()
+        return _load_demo_middlemen(requires_cold_chain=requires_cold_chain)
 
 
 async def check_middleman_at_buyer(

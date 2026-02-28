@@ -3,7 +3,7 @@ import uuid
 from datetime import datetime
 
 from geoalchemy2 import Geometry
-from sqlalchemy import DateTime, Enum as SQLEnum, Float, ForeignKey, String, func
+from sqlalchemy import Boolean, DateTime, Enum as SQLEnum, Float, ForeignKey, String, func
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -47,6 +47,10 @@ class Order(Base):
 
     crop_image_url: Mapped[str | None] = mapped_column(String(500), nullable=True)
     quality_grade: Mapped[str | None] = mapped_column(String(10), nullable=True)
+
+    # Perishability fields — focus on damaged/Grade B produce
+    requires_cold_chain: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    harvest_date: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
     logistics_search_started_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True

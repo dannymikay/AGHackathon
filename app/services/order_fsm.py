@@ -98,7 +98,7 @@ async def transition_order(
         actor_type=actor_type,
         actor_id=actor_id,
         reason=reason,
-        metadata=metadata,
+        extra_data=metadata,
     )
     db.add(audit)
     await db.flush()
@@ -271,7 +271,7 @@ async def accept_bid(
         actor_type="farmer",
         actor_id=farmer_id,
         reason="bid_accepted",
-        metadata={"bid_id": str(bid_id), "volume_kg": bid.volume_kg},
+        extra_data={"bid_id": str(bid_id), "volume_kg": bid.volume_kg},
     )
     db.add(audit)
     await db.flush()

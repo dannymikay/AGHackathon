@@ -26,8 +26,13 @@ async def stripe_webhook(
 ):
     payload = await request.body()
 
-    # In development with placeholder key, skip signature verification
-    if settings.STRIPE_WEBHOOK_SECRET == "whsec_placeholder":
+    # In development with a placeholder webhook secret, skip signature verification.
+    # Matches both the code default ("whsec_placeholder") and the .env template value.
+    _is_placeholder = settings.STRIPE_WEBHOOK_SECRET in (
+        "whsec_placeholder",
+        "whsec_your_stripe_webhook_secret_here",
+    )
+    if _is_placeholder:
         try:
             event = stripe.Event.construct_from(
                 stripe.util.convert_to_stripe_object(

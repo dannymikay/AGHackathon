@@ -3,6 +3,7 @@ from datetime import datetime
 
 from pydantic import BaseModel, ConfigDict, EmailStr, Field
 
+from app.models.middleman import TruckType
 from app.schemas.common import GeoPoint
 
 
@@ -13,6 +14,7 @@ class MiddlemanCreate(BaseModel):
     password: str = Field(min_length=8)
     truck_capacity_kg: float = Field(gt=0)
     truck_plate: str = Field(min_length=2, max_length=20)
+    truck_type: TruckType = TruckType.DRY_VAN
     route_radius_km: float = Field(default=100.0, gt=0)
     current_location: GeoPoint | None = None
 
@@ -20,6 +22,7 @@ class MiddlemanCreate(BaseModel):
 class MiddlemanUpdate(BaseModel):
     name: str | None = Field(default=None, min_length=2, max_length=200)
     truck_capacity_kg: float | None = Field(default=None, gt=0)
+    truck_type: TruckType | None = None
     route_radius_km: float | None = Field(default=None, gt=0)
     is_available: bool | None = None
 
@@ -40,6 +43,7 @@ class MiddlemanPublic(BaseModel):
     name: str
     truck_capacity_kg: float
     truck_plate: str
+    truck_type: TruckType
     route_radius_km: float
     on_time_rating: float
     total_deliveries: int

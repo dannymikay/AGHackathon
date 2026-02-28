@@ -31,6 +31,8 @@ async def update_my_profile(
         middleman.name = body.name
     if body.truck_capacity_kg is not None:
         middleman.truck_capacity_kg = body.truck_capacity_kg
+    if body.truck_type is not None:
+        middleman.truck_type = body.truck_type
     if body.route_radius_km is not None:
         middleman.route_radius_km = body.route_radius_km
     if body.is_available is not None:

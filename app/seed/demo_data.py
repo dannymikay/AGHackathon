@@ -5,6 +5,7 @@ Inserts demo farmers, buyers, middlemen, and sample listings.
 import json
 import logging
 import uuid
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 from passlib.context import CryptContext
@@ -14,7 +15,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.database import AsyncSessionLocal
 from app.models.buyer import Buyer
 from app.models.farmer import Farmer
-from app.models.middleman import Middleman
+from app.models.middleman import Middleman, TruckType
 from app.models.order import Order, OrderStatus
 
 logger = logging.getLogger(__name__)
@@ -101,6 +102,7 @@ async def _seed_all(db: AsyncSession) -> None:
     for feature in trucks_geojson["features"]:
         props = feature["properties"]
         coords = feature["geometry"]["coordinates"]
+        truck_type_str = props.get("truck_type", "DRY_VAN")
         middleman = Middleman(
             id=uuid.UUID(props["id"]),
             name=props["name"],
@@ -109,6 +111,7 @@ async def _seed_all(db: AsyncSession) -> None:
             hashed_password=_DEMO_PASSWORD,
             truck_capacity_kg=props.get("truck_capacity_kg", 5000),
             truck_plate=props.get("truck_plate", f"XX00{trucks_geojson['features'].index(feature):04d}"),
+            truck_type=TruckType(truck_type_str),
             route_radius_km=props.get("route_radius_km", 100),
             on_time_rating=props.get("on_time_rating", 0.0),
             total_deliveries=props.get("total_deliveries", 0),
@@ -127,13 +130,41 @@ async def _seed_all(db: AsyncSession) -> None:
 
     await db.flush()
 
-    # ----- Sample listings -----
+    _now = datetime.now(tz=timezone.utc)
+
+    # ----- Sample listings — focused on damaged / Grade B perishable produce -----
+    # These represent real farmer pain: good-enough crops rejected by wholesalers for cosmetic reasons.
     sample_listings = [
-        {"crop_type": "Tomato", "variety": "Cherry", "total_volume_kg": 2000, "unit_price_asking": 0.45, "quality_grade": "A"},
-        {"crop_type": "Mango", "variety": "Alphonso", "total_volume_kg": 5000, "unit_price_asking": 1.20, "quality_grade": "A"},
-        {"crop_type": "Onion", "variety": "Red", "total_volume_kg": 10000, "unit_price_asking": 0.22, "quality_grade": "B"},
-        {"crop_type": "Banana", "variety": "Cavendish", "total_volume_kg": 3500, "unit_price_asking": 0.35, "quality_grade": "A"},
-        {"crop_type": "Spinach", "variety": None, "total_volume_kg": 800, "unit_price_asking": 0.80, "quality_grade": "B"},
+        {
+            "crop_type": "Tomato", "variety": "Roma (Bruised)",
+            "total_volume_kg": 1800, "unit_price_asking": 0.27,  # 60% of Grade A ₹0.45
+            "quality_grade": "B", "requires_cold_chain": False,
+            "harvest_date": _now - timedelta(days=3),  # 4 days remaining on 7-day shelf
+        },
+        {
+            "crop_type": "Mango", "variety": "Totapuri (Blemished)",
+            "total_volume_kg": 3200, "unit_price_asking": 0.78,  # 65% of Grade A ₹1.20
+            "quality_grade": "B", "requires_cold_chain": False,
+            "harvest_date": _now - timedelta(days=2),  # 3 days remaining on 5-day shelf
+        },
+        {
+            "crop_type": "Spinach", "variety": None,
+            "total_volume_kg": 600, "unit_price_asking": 0.44,  # 55% of Grade A ₹0.80
+            "quality_grade": "B", "requires_cold_chain": True,  # Wilting — needs Reefer
+            "harvest_date": _now - timedelta(days=1),  # 2 days remaining on 3-day shelf
+        },
+        {
+            "crop_type": "Banana", "variety": "Cavendish (Overripe)",
+            "total_volume_kg": 2500, "unit_price_asking": 0.18,  # 50% of Grade A ₹0.35
+            "quality_grade": "B", "requires_cold_chain": False,
+            "harvest_date": _now - timedelta(days=2),  # 1 day remaining on 3-day shelf
+        },
+        {
+            "crop_type": "Onion", "variety": "Red (Cracked Skin)",
+            "total_volume_kg": 8000, "unit_price_asking": 0.17,  # 75% of Grade A ₹0.22
+            "quality_grade": "B", "requires_cold_chain": False,
+            "harvest_date": _now - timedelta(days=5),  # Still 175 days remaining — no urgency
+        },
     ]
     for i, listing in enumerate(sample_listings):
         farmer = farmers[i % len(farmers)]
@@ -146,6 +177,8 @@ async def _seed_all(db: AsyncSession) -> None:
             unit_price_asking=listing["unit_price_asking"],
             quality_grade=listing["quality_grade"],
             status=OrderStatus.LISTED,
+            requires_cold_chain=listing["requires_cold_chain"],
+            harvest_date=listing["harvest_date"],
         )
         db.add(order)
 

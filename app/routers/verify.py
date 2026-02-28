@@ -173,7 +173,7 @@ async def dispute_proof_of_location(
         actor_type="middleman",
         actor_id=middleman.id,
         reason="dispute_proof_of_location",
-        metadata={
+        extra_data={
             "middleman_lat": body.middleman_location.latitude,
             "middleman_lon": body.middleman_location.longitude,
             "buyer_lat": buyer_loc.latitude,

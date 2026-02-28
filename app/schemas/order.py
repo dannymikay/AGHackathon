@@ -1,5 +1,6 @@
 import uuid
 from datetime import datetime
+from typing import Optional
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -15,6 +16,8 @@ class OrderCreate(BaseModel):
     total_volume_kg: float = Field(gt=0)
     unit_price_asking: float = Field(gt=0)
     location: GeoPoint | None = None
+    requires_cold_chain: bool = False
+    harvest_date: datetime | None = None
 
 
 class OrderPublic(BaseModel):
@@ -29,6 +32,8 @@ class OrderPublic(BaseModel):
     status: OrderStatus
     quality_grade: str | None
     crop_image_url: str | None
+    requires_cold_chain: bool
+    harvest_date: datetime | None
     created_at: datetime
 
 
@@ -46,3 +51,39 @@ class GradingResult(BaseModel):
     confidence_score: float
     image_url: str
     market_price_hint: float | None = None
+    days_remaining: int | None = None
+    suggested_grade_b_price: float | None = None
+
+
+class ProduceIntelligenceResponse(BaseModel):
+    crop_type: str
+    shelf_life_days: int | None
+    days_remaining: int | None
+    requires_cold_chain: bool
+    suggested_price: float | None
+    grade: str | None
+
+
+class PriceGuidanceResponse(BaseModel):
+    """
+    Returned before a Farmer creates a listing so they know what price to ask.
+    Shows Grade A price (unchanged), standard Grade B discount, and the urgency-
+    adjusted price if the Farmer has already declared a harvest date.
+    """
+    crop_type: str
+    shelf_life_days: int | None
+    requires_cold_chain: bool
+    grade_a_suggested_price: float | None      # asking_price, no change
+    grade_b_standard_price: float | None       # asking_price × grade_b_ratio
+    grade_b_urgency_price: float | None        # further reduced by days remaining
+    days_remaining: int | None
+    urgency_note: str | None                   # human-readable explanation shown to Farmer
+
+
+class OrderCreateResponse(OrderPublic):
+    """
+    Extended response returned when a Farmer creates a listing.
+    Includes all standard OrderPublic fields plus inline price guidance
+    so the Farmer can see immediately whether their asking price is in range.
+    """
+    price_guidance: Optional[PriceGuidanceResponse] = None
