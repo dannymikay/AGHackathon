@@ -115,9 +115,8 @@ async def verify_delivery(
     if submitted_hash != order.delivery_qr_hash:
         raise HTTPException(status_code=400, detail="Invalid QR token")
 
-    await escrow_service.release_delivery(order, order.escrow)
-
-    async with db.begin():
+    try:
+        await escrow_service.release_delivery(order, order.escrow)
         await order_fsm.transition_order(
             db,
             order.id,
@@ -130,6 +129,10 @@ async def verify_delivery(
         middleman.is_available = True
         middleman.total_deliveries += 1
         order.farmer.total_transactions += 1
+        await db.commit()
+    except Exception:
+        await db.rollback()
+        raise
 
     await db.refresh(order.escrow)
     return order.escrow

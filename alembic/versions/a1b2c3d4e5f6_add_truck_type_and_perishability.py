@@ -18,10 +18,14 @@ depends_on: Union[str, Sequence[str], None] = None
 
 
 def upgrade() -> None:
-    # Create the truck_type enum type
-    op.execute(
-        "CREATE TYPE truck_type_enum AS ENUM ('REEFER', 'VENTILATED', 'INSULATED', 'DRY_VAN')"
-    )
+    # Create the truck_type enum type — idempotent in case it survived a DB reset
+    op.execute("""
+        DO $$ BEGIN
+            CREATE TYPE truck_type_enum AS ENUM ('REEFER', 'VENTILATED', 'INSULATED', 'DRY_VAN');
+        EXCEPTION
+            WHEN duplicate_object THEN NULL;
+        END $$;
+    """)
 
     # Add truck_type to middlemen — default existing rows to DRY_VAN
     op.add_column(

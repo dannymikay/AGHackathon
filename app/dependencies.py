@@ -24,6 +24,11 @@ _CREDS_EXCEPTION = HTTPException(
     headers={"WWW-Authenticate": "Bearer"},
 )
 
+_ROLE_EXCEPTION = HTTPException(
+    status_code=status.HTTP_403_FORBIDDEN,
+    detail="Insufficient role",
+)
+
 
 def _decode_token(token: str) -> dict:
     try:
@@ -50,7 +55,7 @@ async def get_current_farmer(
 ) -> Farmer:
     user_id, role = _extract_sub_and_role(credentials.credentials)
     if role != "farmer":
-        raise _CREDS_EXCEPTION
+        raise _ROLE_EXCEPTION
     farmer = (await db.execute(select(Farmer).where(Farmer.id == user_id))).scalar_one_or_none()
     if farmer is None:
         raise _CREDS_EXCEPTION
@@ -63,7 +68,7 @@ async def get_current_buyer(
 ) -> Buyer:
     user_id, role = _extract_sub_and_role(credentials.credentials)
     if role != "buyer":
-        raise _CREDS_EXCEPTION
+        raise _ROLE_EXCEPTION
     buyer = (await db.execute(select(Buyer).where(Buyer.id == user_id))).scalar_one_or_none()
     if buyer is None:
         raise _CREDS_EXCEPTION
@@ -76,7 +81,7 @@ async def get_current_middleman(
 ) -> Middleman:
     user_id, role = _extract_sub_and_role(credentials.credentials)
     if role != "middleman":
-        raise _CREDS_EXCEPTION
+        raise _ROLE_EXCEPTION
     middleman = (
         await db.execute(select(Middleman).where(Middleman.id == user_id))
     ).scalar_one_or_none()

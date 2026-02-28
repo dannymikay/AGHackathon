@@ -34,20 +34,22 @@ async def submit_bid(
     db: Annotated[AsyncSession, Depends(get_db)],
 ):
     try:
-        async with db.begin():
-            bid, _ = await order_fsm.submit_bid(
-                db,
-                body.order_id,
-                buyer.id,
-                body.offered_price_per_kg,
-                body.volume_kg,
-                body.message,
-            )
+        bid, _ = await order_fsm.submit_bid(
+            db,
+            body.order_id,
+            buyer.id,
+            body.offered_price_per_kg,
+            body.volume_kg,
+            body.message,
+        )
+        await db.commit()
         await db.refresh(bid)
         return bid
     except OrderNotFoundError as exc:
+        await db.rollback()
         raise HTTPException(status_code=404, detail=str(exc))
     except (InvalidTransitionError, InsufficientVolumeError) as exc:
+        await db.rollback()
         raise HTTPException(status_code=409, detail=str(exc))
 
 
@@ -83,20 +85,23 @@ async def accept_bid(
     - Returns client_secret to forward to the buyer.
     """
     try:
-        async with db.begin():
-            order, escrow, raw_pickup_token, raw_delivery_token = await order_fsm.accept_bid(
-                db, farmer.id, bid_id
-            )
-            client_secret = await escrow_service.create_payment_intent(order, escrow)
+        order, escrow, raw_pickup_token, raw_delivery_token = await order_fsm.accept_bid(
+            db, farmer.id, bid_id
+        )
+        client_secret = await escrow_service.create_payment_intent(order, escrow)
+        await db.commit()
         return PaymentInitiate(
             stripe_client_secret=client_secret,
             amount_cents=escrow.total_amount_cents,
         )
     except BidNotFoundError as exc:
+        await db.rollback()
         raise HTTPException(status_code=404, detail=str(exc))
     except (InvalidTransitionError, InsufficientVolumeError) as exc:
+        await db.rollback()
         raise HTTPException(status_code=409, detail=str(exc))
     except UnauthorizedError as exc:
+        await db.rollback()
         raise HTTPException(status_code=403, detail=str(exc))
 
 

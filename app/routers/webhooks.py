@@ -2,6 +2,7 @@
 Stripe webhook receiver.
 Verifies Stripe signature and dispatches to escrow service.
 """
+import json as _json
 import logging
 
 import stripe
@@ -34,12 +35,7 @@ async def stripe_webhook(
     )
     if _is_placeholder:
         try:
-            event = stripe.Event.construct_from(
-                stripe.util.convert_to_stripe_object(
-                    stripe.util.json.loads(payload)
-                ),
-                stripe.api_key,
-            )
+            event = _json.loads(payload)
         except Exception as exc:
             raise HTTPException(status_code=400, detail=str(exc))
     else:

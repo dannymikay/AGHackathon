@@ -181,27 +181,26 @@ async def accept_assignment(
     )
 
     try:
-        async with db.begin():
-            # All mutations within the same transaction so they roll back together
-            if route and assignment.estimated_distance_km is None:
-                assignment.estimated_distance_km = route["distance_km"]
+        if route and assignment.estimated_distance_km is None:
+            assignment.estimated_distance_km = route["distance_km"]
 
-            assignment.status = AssignmentStatus.ACCEPTED
-            assignment.accepted_at = datetime.now(tz=timezone.utc)
-            assignment.last_gps_ping_at = datetime.now(tz=timezone.utc)
-            middleman.is_available = False
+        assignment.status = AssignmentStatus.ACCEPTED
+        assignment.accepted_at = datetime.now(tz=timezone.utc)
+        assignment.last_gps_ping_at = datetime.now(tz=timezone.utc)
+        middleman.is_available = False
 
-            await order_fsm.transition_order(
-                db,
-                order.id,
-                OrderStatus.IN_TRANSIT,
-                actor_type="middleman",
-                actor_id=middleman.id,
-                reason="middleman_accepted",
-            )
-
+        await order_fsm.transition_order(
+            db,
+            order.id,
+            OrderStatus.IN_TRANSIT,
+            actor_type="middleman",
+            actor_id=middleman.id,
+            reason="middleman_accepted",
+        )
+        await db.commit()
         return {"ok": True, "order_id": str(order.id), "status": "IN_TRANSIT"}
     except InvalidTransitionError as exc:
+        await db.rollback()
         raise HTTPException(status_code=409, detail=str(exc))
 
 
