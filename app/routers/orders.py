@@ -80,6 +80,7 @@ async def list_orders(
     db: Annotated[AsyncSession, Depends(get_db)],
     status: OrderStatus | None = Query(default=None),
     crop_type: str | None = Query(default=None),
+    farmer_id: uuid.UUID | None = Query(default=None),
     limit: int = Query(default=20, ge=1, le=100),
     offset: int = Query(default=0, ge=0),
 ):
@@ -88,6 +89,8 @@ async def list_orders(
         stmt = stmt.where(Order.status == status)
     if crop_type:
         stmt = stmt.where(Order.crop_type.ilike(f"%{crop_type}%"))
+    if farmer_id:
+        stmt = stmt.where(Order.farmer_id == farmer_id)
     stmt = stmt.order_by(Order.created_at.desc()).offset(offset).limit(limit)
     orders = (await db.execute(stmt)).scalars().all()
     return orders

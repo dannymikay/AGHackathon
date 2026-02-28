@@ -1,0 +1,19 @@
+@import "tailwindcss";
+
+:root {
+  --color-primary: #4A6741;
+  --color-primary-dark: #3a5232;
+  --color-bg: #F5F2ED;
+}
+
+body {
+  margin: 0;
+  background-color: var(--color-bg);
+  font-family: system-ui, -apple-system, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Leaflet fix — ensure map tiles render above nothing */
+.leaflet-container {
+  z-index: 0;
+}
