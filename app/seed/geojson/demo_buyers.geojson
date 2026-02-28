@@ -1,0 +1,65 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "geometry": { "type": "Point", "coordinates": [80.2707, 13.0827] },
+      "properties": {
+        "id": "33333333-3333-3333-3333-000000000001",
+        "name": "FreshMart Chennai",
+        "email": "procurement@freshmart.com",
+        "delivery_address": "Phase II, Koyambedu Market, Chennai 600107",
+        "payment_speed_rating": 4.8,
+        "purchase_history_count": 145
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": { "type": "Point", "coordinates": [77.5946, 12.9716] },
+      "properties": {
+        "id": "33333333-3333-3333-3333-000000000002",
+        "name": "GreenGrocer Bangalore",
+        "email": "orders@greengrocer.in",
+        "delivery_address": "APMC Yard, Yeshwanthpur, Bangalore 560022",
+        "payment_speed_rating": 4.5,
+        "purchase_history_count": 89
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": { "type": "Point", "coordinates": [76.9366, 8.5241] },
+      "properties": {
+        "id": "33333333-3333-3333-3333-000000000003",
+        "name": "Kerala Organics Co",
+        "email": "supply@keralaorganics.com",
+        "delivery_address": "Chalai Market, Thiruvananthapuram 695036",
+        "payment_speed_rating": 4.2,
+        "purchase_history_count": 62
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": { "type": "Point", "coordinates": [78.1197, 9.9252] },
+      "properties": {
+        "id": "33333333-3333-3333-3333-000000000004",
+        "name": "Madurai Wholesale Hub",
+        "email": "buy@maduraiwholesale.com",
+        "delivery_address": "Mattuthavani Bus Stand Area, Madurai 625107",
+        "payment_speed_rating": 3.9,
+        "purchase_history_count": 38
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": { "type": "Point", "coordinates": [79.3129, 10.7905] },
+      "properties": {
+        "id": "33333333-3333-3333-3333-000000000005",
+        "name": "Delta Processors Ltd",
+        "email": "intake@deltaprocessors.com",
+        "delivery_address": "Industrial Area, Thanjavur 613007",
+        "payment_speed_rating": 4.6,
+        "purchase_history_count": 77
+      }
+    }
+  ]
+}
