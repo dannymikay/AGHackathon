@@ -3,10 +3,10 @@ import axios from 'axios'
 // In development the Vite proxy rewrites /api → http://localhost:8000.
 // In production set VITE_API_BASE_URL to your deployed backend URL, e.g.
 //   https://agrimatch-backend.railway.app
+// Strip any trailing slash from the env var to prevent double-slash paths
+const _apiBase = (import.meta.env.VITE_API_BASE_URL ?? '').replace(/\/+$/, '')
 const api = axios.create({
-  baseURL: import.meta.env.VITE_API_BASE_URL
-    ? `${import.meta.env.VITE_API_BASE_URL}/api/v1`
-    : '/api/v1',
+  baseURL: _apiBase ? `${_apiBase}/api/v1` : '/api/v1',
 })
 
 // Inject auth token on every request
