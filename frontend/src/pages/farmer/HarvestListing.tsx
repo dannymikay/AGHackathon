@@ -109,16 +109,16 @@ export default function HarvestListing() {
           {pg && (
             <div className="mb-4">
               <p className="text-sm text-gray-600 mb-1">
-                Suggested price: <strong>₹{pg.grade_a_suggested_price}/kg</strong>
+                Suggested price: <strong>${pg.grade_a_suggested_price}/kg</strong>
               </p>
               {pg.grade_b_standard_price && (
                 <p className="text-sm text-gray-600 mb-1">
-                  Grade B standard: <strong>₹{pg.grade_b_standard_price}/kg</strong>
+                  Grade B standard: <strong>${pg.grade_b_standard_price}/kg</strong>
                 </p>
               )}
               {pg.grade_b_urgency_price && (
                 <p className="text-sm text-amber-600 mb-1">
-                  Urgency price: <strong>₹{pg.grade_b_urgency_price}/kg</strong>
+                  Urgency price: <strong>${pg.grade_b_urgency_price}/kg</strong>
                 </p>
               )}
               {pg.days_remaining !== undefined && (
@@ -177,7 +177,7 @@ export default function HarvestListing() {
             value={volume} onChange={(e) => setVolume(e.target.value)} required />
           <InputField label="Harvest Date" id="harvestDate" type="date"
             value={harvestDate} onChange={(e) => setHarvestDate(e.target.value)} />
-          <InputField label="Asking Price per kg (₹) — leave blank for open bids" id="price"
+          <InputField label="Asking Price per kg ($) — leave blank for open bids" id="price"
             type="number" step="0.01" min="0"
             value={askingPrice} onChange={(e) => setAskingPrice(e.target.value)} />
 

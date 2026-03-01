@@ -102,7 +102,7 @@ export default function BidForm() {
             <p className="font-semibold text-gray-800">{order.crop_type} {order.variety ? `— ${order.variety}` : ''}</p>
             {order.quality_grade && <GradeBadge grade={order.quality_grade} />}
           </div>
-          <p className="text-[#4A6741] font-bold">₹{order.unit_price_asking}/kg</p>
+          <p className="text-[#4A6741] font-bold">${order.unit_price_asking}/kg</p>
           <p className="text-sm text-gray-500">{order.available_volume_kg} kg available</p>
           {order.price_guidance?.urgency_note && (
             <p className="text-xs text-amber-600 mt-2">{order.price_guidance.urgency_note}</p>
@@ -116,13 +116,13 @@ export default function BidForm() {
             value={volume} onChange={(e) => setVolume(e.target.value)} required
           />
           <InputField
-            label="Bid Price per kg (₹)"
+            label="Bid Price per kg ($)"
             id="price" type="number" step="0.01" min="0"
             value={price} onChange={(e) => setPrice(e.target.value)} required
           />
           {order.price_guidance?.grade_b_standard_price && (
             <p className="text-xs text-gray-500 -mt-2">
-              Grade B benchmark: ₹{order.price_guidance.grade_b_standard_price}/kg
+              Grade B benchmark: ${order.price_guidance.grade_b_standard_price}/kg
             </p>
           )}
 

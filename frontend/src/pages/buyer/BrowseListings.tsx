@@ -107,7 +107,7 @@ export default function BrowseListings() {
               <Popup>
                 <strong>{order.crop_type}</strong>
                 <br />
-                {order.available_volume_kg} kg @ ₹{order.unit_price_asking}/kg
+                {order.available_volume_kg} kg @ ${order.unit_price_asking}/kg
                 <br />
                 <button
                   className="text-[#4A6741] font-semibold mt-1"
@@ -141,7 +141,7 @@ export default function BrowseListings() {
                     <StatusBadge status={order.status} />
                   </div>
                 </div>
-                <p className="text-[#4A6741] font-bold text-right whitespace-nowrap">₹{order.unit_price_asking}/kg</p>
+                <p className="text-[#4A6741] font-bold text-right whitespace-nowrap">${order.unit_price_asking}/kg</p>
               </div>
               <p className="text-sm text-gray-500 mt-1">{order.available_volume_kg} kg available</p>
               {order.price_guidance?.urgency_note && (

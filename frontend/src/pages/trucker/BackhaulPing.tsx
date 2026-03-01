@@ -126,7 +126,7 @@ export default function BackhaulPing() {
                   )}
                 </div>
                 <div className="text-right">
-                  <p className="font-bold text-amber-700 text-lg">₹{(feeCents / 100).toLocaleString()}</p>
+                  <p className="font-bold text-amber-700 text-lg">${(feeCents / 100).toLocaleString()}</p>
                 </div>
               </div>
 

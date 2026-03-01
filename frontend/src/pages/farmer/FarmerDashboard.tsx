@@ -96,7 +96,7 @@ export default function FarmerDashboard() {
                     {order.quality_grade && <GradeBadge grade={order.quality_grade} />}
                   </div>
                 </div>
-                <p className="text-[#4A6741] font-bold whitespace-nowrap">₹{order.unit_price_asking}/kg</p>
+                <p className="text-[#4A6741] font-bold whitespace-nowrap">${order.unit_price_asking}/kg</p>
               </div>
               <p className="text-sm text-gray-500 mt-1">{order.available_volume_kg} kg available</p>
 
@@ -121,7 +121,7 @@ export default function FarmerDashboard() {
                 {bids[order.id]?.map((bid) => (
                   <div key={bid.id} className="flex items-center justify-between py-2 border-b border-gray-100 last:border-0">
                     <div>
-                      <p className="text-sm font-medium text-gray-800">₹{bid.offered_price_per_kg}/kg · {bid.volume_kg} kg</p>
+                      <p className="text-sm font-medium text-gray-800">${bid.offered_price_per_kg}/kg · {bid.volume_kg} kg</p>
                       {bid.message && <p className="text-xs text-gray-500 mt-0.5">{bid.message}</p>}
                       <span className={`text-xs font-semibold ${bid.status === 'PENDING' ? 'text-yellow-600' : bid.status === 'ACCEPTED' ? 'text-green-600' : 'text-red-500'}`}>
                         {bid.status}
