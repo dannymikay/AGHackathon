@@ -13,6 +13,7 @@ export default function FarmerDashboard() {
   const { logout, userId } = useAuth()
   const [orders, setOrders] = useState<Order[]>([])
   const [bids, setBids] = useState<Record<string, Bid[]>>({})
+  const [bidsError, setBidsError] = useState<Record<string, string>>({})
   const [expandedOrder, setExpandedOrder] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
   const [actionLoading, setActionLoading] = useState<string | null>(null)
@@ -31,11 +32,15 @@ export default function FarmerDashboard() {
   const loadBids = async (orderId: string) => {
     if (expandedOrder === orderId) { setExpandedOrder(null); return }
     setExpandedOrder(orderId)
+    setBidsError((prev) => { const n = { ...prev }; delete n[orderId]; return n })
     try {
       const r = await listBidsForOrder(orderId)
       setBids((prev) => ({ ...prev, [orderId]: r.data }))
-    } catch {
+    } catch (err: unknown) {
+      const e = err as { response?: { data?: { detail?: string }; status?: number } }
+      const msg = e.response?.data?.detail ?? `Failed to load bids (HTTP ${e.response?.status ?? 'network error'})`
       setBids((prev) => ({ ...prev, [orderId]: [] }))
+      setBidsError((prev) => ({ ...prev, [orderId]: msg }))
     }
   }
 
@@ -45,6 +50,7 @@ export default function FarmerDashboard() {
       await acceptBid(bidId)
       setExpandedOrder(null)
       setBids({})
+      setBidsError({})
       fetchOrders()
     } catch (err: unknown) {
       const e = err as { response?: { data?: { detail?: string } } }
@@ -94,7 +100,7 @@ export default function FarmerDashboard() {
               </div>
               <p className="text-sm text-gray-500 mt-1">{order.available_volume_kg} kg available</p>
 
-              {order.status === 'NEGOTIATING' && (
+              {(order.status === 'NEGOTIATING' || order.status === 'LISTED') && (
                 <button
                   className="mt-3 text-sm font-semibold text-[#4A6741] underline"
                   onClick={() => loadBids(order.id)}
@@ -107,8 +113,11 @@ export default function FarmerDashboard() {
             {/* Bid inbox */}
             {expandedOrder === order.id && (
               <div className="border-t border-gray-100 px-4 py-3 bg-gray-50">
-                {!bids[order.id] && <p className="text-sm text-gray-400">Loading bids…</p>}
-                {bids[order.id]?.length === 0 && <p className="text-sm text-gray-400">No bids yet.</p>}
+                {!bids[order.id] && !bidsError[order.id] && <p className="text-sm text-gray-400">Loading bids…</p>}
+                {bidsError[order.id] && (
+                  <p className="text-sm text-red-600 mb-2">⚠ {bidsError[order.id]}</p>
+                )}
+                {bids[order.id]?.length === 0 && !bidsError[order.id] && <p className="text-sm text-gray-400">No bids yet.</p>}
                 {bids[order.id]?.map((bid) => (
                   <div key={bid.id} className="flex items-center justify-between py-2 border-b border-gray-100 last:border-0">
                     <div>

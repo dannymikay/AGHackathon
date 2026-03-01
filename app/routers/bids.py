@@ -103,6 +103,9 @@ async def accept_bid(
     except UnauthorizedError as exc:
         await db.rollback()
         raise HTTPException(status_code=403, detail=str(exc))
+    except Exception as exc:
+        await db.rollback()
+        raise HTTPException(status_code=500, detail=str(exc))
 
 
 @router.post("/{bid_id}/reject", response_model=BidPublic)

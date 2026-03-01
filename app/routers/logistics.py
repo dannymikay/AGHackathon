@@ -136,6 +136,83 @@ async def get_route_info(
     )
 
 
+@router.post("/accept-order/{order_id}")
+async def accept_order_directly(
+    order_id: uuid.UUID,
+    middleman: Annotated[Middleman, Depends(get_current_middleman)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+):
+    """
+    Trucker accepts a LOGISTICS_SEARCH order directly.
+    Atomically creates a LogisticsAssignment and transitions the order to IN_TRANSIT.
+    Handles the race condition where two truckers try to accept simultaneously.
+    """
+    order_stmt = (
+        select(Order)
+        .where(Order.id == order_id)
+        .with_for_update(nowait=True)
+    )
+    try:
+        order = (await db.execute(order_stmt)).scalar_one_or_none()
+    except Exception:
+        await db.rollback()
+        raise HTTPException(status_code=409, detail="Order is being accepted by another trucker — try again")
+
+    if order is None:
+        raise HTTPException(status_code=404, detail="Order not found")
+    if order.status != OrderStatus.LOGISTICS_SEARCH:
+        raise HTTPException(
+            status_code=409,
+            detail=f"Order is not looking for a trucker (status: {order.status.value})",
+        )
+
+    # Check if an assignment already exists for this order
+    existing = (
+        await db.execute(
+            select(LogisticsAssignment).where(LogisticsAssignment.order_id == order_id)
+        )
+    ).scalar_one_or_none()
+
+    if existing is not None and existing.status == AssignmentStatus.ACCEPTED:
+        raise HTTPException(status_code=409, detail="Another trucker already accepted this job")
+
+    if existing is not None:
+        assignment = existing
+        assignment.middleman_id = middleman.id
+    else:
+        assignment = LogisticsAssignment(
+            order_id=order_id,
+            middleman_id=middleman.id,
+            estimated_distance_km=346.0,
+            status=AssignmentStatus.OFFERED,
+        )
+        db.add(assignment)
+        await db.flush()
+
+    assignment.status = AssignmentStatus.ACCEPTED
+    assignment.accepted_at = datetime.now(tz=timezone.utc)
+    assignment.last_gps_ping_at = datetime.now(tz=timezone.utc)
+    middleman.is_available = False
+
+    try:
+        await order_fsm.transition_order(
+            db,
+            order.id,
+            OrderStatus.IN_TRANSIT,
+            actor_type="middleman",
+            actor_id=middleman.id,
+            reason="middleman_accepted_directly",
+        )
+        await db.commit()
+        return {"ok": True, "order_id": str(order.id), "assignment_id": str(assignment.id), "status": "IN_TRANSIT"}
+    except InvalidTransitionError as exc:
+        await db.rollback()
+        raise HTTPException(status_code=409, detail=str(exc))
+    except Exception as exc:
+        await db.rollback()
+        raise HTTPException(status_code=500, detail=str(exc))
+
+
 @router.post("/accept/{assignment_id}")
 async def accept_assignment(
     assignment_id: uuid.UUID,

@@ -43,10 +43,17 @@ export default function BrowseListings() {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    const params: Record<string, string> = { status: 'LISTED' }
+    setLoading(true)
+    const params: Record<string, string> = {}
     if (cropFilter !== 'All') params.crop_type = cropFilter
-    listOrders(params)
-      .then((r) => setOrders(r.data))
+    // Fetch both LISTED and NEGOTIATING so listings stay visible after first bid
+    Promise.all([
+      listOrders({ ...params, status: 'LISTED' }),
+      listOrders({ ...params, status: 'NEGOTIATING' }),
+    ])
+      .then(([listed, negotiating]) => {
+        setOrders([...listed.data, ...negotiating.data])
+      })
       .catch(() => setOrders([]))
       .finally(() => setLoading(false))
   }, [cropFilter])

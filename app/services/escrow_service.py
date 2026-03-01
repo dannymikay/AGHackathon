@@ -40,7 +40,7 @@ async def create_payment_intent(order: Order, escrow: Escrow) -> str:
     authorizes but we don't charge until logistics are confirmed.
     Returns the client_secret to send to the buyer's frontend.
     """
-    if settings.APP_ENV == "development" and settings.STRIPE_SECRET_KEY.startswith("sk_test_placeholder"):
+    if settings.STRIPE_SECRET_KEY.startswith("sk_test_placeholder") or settings.DEMO_MODE:
         # Demo mode: return a fake client secret
         escrow.stripe_payment_intent_id = f"pi_demo_{uuid.uuid4().hex[:20]}"
         return f"pi_demo_secret_{uuid.uuid4().hex}"

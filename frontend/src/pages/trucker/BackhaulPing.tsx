@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { listOrders, searchNearbyTruckers, acceptAssignment } from '../../services/api'
+import { listOrders, searchNearbyTruckers, acceptOrderDirectly } from '../../services/api'
 import { MapContainer, TileLayer, Marker, Popup, Polyline } from 'react-leaflet'
 import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
@@ -73,10 +73,10 @@ export default function BackhaulPing() {
       .finally(() => setLoading(false))
   }, [])
 
-  const handleAccept = async (assignmentId: string, orderId: string) => {
-    setActionLoading(assignmentId)
+  const handleAccept = async (orderId: string) => {
+    setActionLoading(orderId)
     try {
-      await acceptAssignment(assignmentId)
+      await acceptOrderDirectly(orderId)
       navigate(`/trucker/tracking/${orderId}`)
     } catch (err: unknown) {
       const e = err as { response?: { data?: { detail?: string } } }
@@ -138,10 +138,10 @@ export default function BackhaulPing() {
               <div className="flex gap-3">
                 <Button
                   fullWidth
-                  onClick={() => handleAccept(a.id, a.order_id)}
+                  onClick={() => handleAccept(a.order_id)}
                   disabled={!!actionLoading}
                 >
-                  {actionLoading === a.id ? 'Accepting…' : 'Accept Trip ✓'}
+                  {actionLoading === a.order_id ? 'Accepting…' : 'Accept Trip ✓'}
                 </Button>
                 <Button variant="secondary" fullWidth>
                   Decline ✗

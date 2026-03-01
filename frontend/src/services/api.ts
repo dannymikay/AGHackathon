@@ -1,6 +1,13 @@
 import axios from 'axios'
 
-const api = axios.create({ baseURL: '/api/v1' })
+// In development the Vite proxy rewrites /api → http://localhost:8000.
+// In production set VITE_API_BASE_URL to your deployed backend URL, e.g.
+//   https://agrimatch-backend.railway.app
+const api = axios.create({
+  baseURL: import.meta.env.VITE_API_BASE_URL
+    ? `${import.meta.env.VITE_API_BASE_URL}/api/v1`
+    : '/api/v1',
+})
 
 // Inject auth token on every request
 api.interceptors.request.use((config) => {
@@ -62,6 +69,10 @@ export const searchNearbyTruckers = (orderId: string) =>
 
 export const acceptAssignment = (assignmentId: string) =>
   api.post(`/logistics/accept/${assignmentId}`)
+
+// Accept a LOGISTICS_SEARCH order directly (creates assignment + transitions to IN_TRANSIT)
+export const acceptOrderDirectly = (orderId: string) =>
+  api.post(`/logistics/accept-order/${orderId}`)
 
 export const rejectAssignment = (assignmentId: string) =>
   api.post(`/logistics/reject/${assignmentId}`)
